@@ -897,7 +897,7 @@ fun CallLogFullContent(
                                                         )
                                                     )
                                                 }
-                                                else -> callLauncher.dial(log.number, contact)
+                                                else -> callLauncher.dial(log.number, contact, isIncomingCallback = log.type == CallLog.Calls.INCOMING_TYPE || log.type == CallLog.Calls.MISSED_TYPE)
                                             }
                                         },
                                         onLongClick = { log ->
@@ -910,7 +910,7 @@ fun CallLogFullContent(
                                                 "save" -> {
                                                     fullContentAddToContactNumber = log.number
                                                 }
-                                                "call" -> callLauncher.dial(log.number, contact)
+                                                "call" -> callLauncher.dial(log.number, contact, isIncomingCallback = log.type == CallLog.Calls.INCOMING_TYPE || log.type == CallLog.Calls.MISSED_TYPE)
                                                 "video_call" -> videoLauncher.startVideoCall(log.number, contact)
                                                 "message" -> messageLauncher.sendMessage(log.number, contact)
                                                 "history" -> {
@@ -958,7 +958,7 @@ fun CallLogFullContent(
                                             } else {
                                                 val contact = contactsById[log.contactId]
                                                 when (action) {
-                                                    SwipeActionType.CALL -> callLauncher.dial(log.number, contact)
+                                                    SwipeActionType.CALL -> callLauncher.dial(log.number, contact, isIncomingCallback = log.type == CallLog.Calls.INCOMING_TYPE || log.type == CallLog.Calls.MISSED_TYPE)
                                                     SwipeActionType.MESSAGE -> messageLauncher.sendMessage(log.number, contact)
                                                     SwipeActionType.VIDEO_CALL -> videoLauncher.startVideoCall(log.number, contact)
                                                     SwipeActionType.WHATSAPP -> SocialUtils.openWhatsApp(context, log.number)

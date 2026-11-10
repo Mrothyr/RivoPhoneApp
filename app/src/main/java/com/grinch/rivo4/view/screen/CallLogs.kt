@@ -196,7 +196,9 @@ fun CallLogFullScreen(
         if (phoneLabel != null) "$phoneLabel • $formatted" else formatted
     }
 
-    val handleCallNumber: (String, String?) -> Unit = { numberToCall, cid ->
+    var pendingIsIncomingCallback by remember { mutableStateOf(false) }
+
+    val handleCallNumber: (String, String?, Boolean) -> Unit = { numberToCall, cid, isIncomingCallback ->
         val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
             context,
             android.Manifest.permission.READ_PHONE_STATE
@@ -207,16 +209,17 @@ fun CallLogFullScreen(
             val favSim = cid?.let { prefs.getDefaultSimForContact(it) }
             val preferredHandle = if (favSim != null) accounts.find { it.id == favSim } else null
             if (preferredHandle != null) {
-                makeCall(context, numberToCall, preferredHandle, contactId = cid)
+                makeCall(context, numberToCall, preferredHandle, contactId = cid, isIncomingCallback = isIncomingCallback)
             } else if (accounts.size > 1 && prefs.getInt("default_sim", 0) == 0) {
                 pendingNumber = numberToCall
                 pendingContactId = cid
+                pendingIsIncomingCallback = isIncomingCallback
                 showSimPicker = true
             } else {
-                makeCall(context, numberToCall, contactId = cid)
+                makeCall(context, numberToCall, contactId = cid, isIncomingCallback = isIncomingCallback)
             }
         } else {
-            makeCall(context, numberToCall, contactId = cid)
+            makeCall(context, numberToCall, contactId = cid, isIncomingCallback = isIncomingCallback)
         }
     }
 
@@ -225,7 +228,7 @@ fun CallLogFullScreen(
         SimPickerDialog(
             onDismissRequest = { showSimPicker = false },
             onSimSelected = { handle ->
-                makeCall(context, pendingNumber!!, handle, contactId = cid)
+                makeCall(context, pendingNumber!!, handle, contactId = cid, isIncomingCallback = pendingIsIncomingCallback)
                 showSimPicker = false
             },
             showRememberOption = cid != null,
@@ -233,7 +236,7 @@ fun CallLogFullScreen(
                 if (rememberForContact && cid != null) {
                     prefs.setDefaultSimForContact(cid, handle.id)
                 }
-                makeCall(context, pendingNumber!!, handle, contactId = cid)
+                makeCall(context, pendingNumber!!, handle, contactId = cid, isIncomingCallback = pendingIsIncomingCallback)
                 showSimPicker = false
             }
         )
@@ -390,7 +393,7 @@ fun CallLogFullScreen(
                                     .weight(1f)
                                     .padding(end = 16.dp)
                                     .clip(RoundedCornerShape(28.dp))
-                                    .clickable { handleCallNumber(targetPhoneNumber, matchedContact?.id ?: contactId) }
+                                    .clickable { handleCallNumber(targetPhoneNumber, matchedContact?.id ?: contactId, false) }
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxSize(),
@@ -727,7 +730,7 @@ fun CallLogFullScreen(
                                                                     selectedEntries + lg
                                                                 }
                                                             } else {
-                                                                handleCallNumber(lg.number, lg.contactId)
+                                                                handleCallNumber(lg.number, lg.contactId, lg.type == CallLog.Calls.INCOMING_TYPE || lg.type == CallLog.Calls.MISSED_TYPE)
                                                             }
                                                         },
                                                         onLongClick = {
@@ -735,7 +738,7 @@ fun CallLogFullScreen(
                                                                 selectedEntries = selectedEntries + lg
                                                             }
                                                         },
-                                                        onCallClick = { handleCallNumber(lg.number, lg.contactId) },
+                                                        onCallClick = { handleCallNumber(lg.number, lg.contactId, lg.type == CallLog.Calls.INCOMING_TYPE || lg.type == CallLog.Calls.MISSED_TYPE) },
                                                         selected = selectedEntries.any { it.id == lg.id },
                                                         onSwipeAction = { action, log ->
                                                             if (action == SwipeActionType.DELETE) {

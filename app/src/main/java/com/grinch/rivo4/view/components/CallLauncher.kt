@@ -29,10 +29,10 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 class CallLauncher(
-    private val onInitiate: (String, Contact?) -> Unit
+    private val onInitiate: (String, Contact?, Boolean) -> Unit
 ) {
-    fun dial(number: String, contact: Contact? = null) {
-        onInitiate(number, contact)
+    fun dial(number: String, contact: Contact? = null, isIncomingCallback: Boolean = false) {
+        onInitiate(number, contact, isIncomingCallback)
     }
 }
 
@@ -47,11 +47,12 @@ fun rememberCallLauncher(): CallLauncher {
     var showNumberPicker by remember { mutableStateOf(false) }
     var pendingNumber by remember { mutableStateOf("") }
     var pendingContact by remember { mutableStateOf<Contact?>(null) }
+    var pendingIsIncomingCallback by remember { mutableStateOf(false) }
 
     val contactsRepo = koinInject<IContactsRepository>()
     val coroutineScope = rememberCoroutineScope()
 
-    val performFinalCall = { number: String, contactId: String? ->
+    val performFinalCall = { number: String, contactId: String?, isIncomingCallback: Boolean ->
         val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
         if (hasPermission) {
             val accounts = try { telecomManager.callCapablePhoneAccounts } catch (e: SecurityException) { emptyList() }
@@ -60,9 +61,10 @@ fun rememberCallLauncher(): CallLauncher {
             val preferredHandle = if (favSim != null) accounts.find { it.id == favSim } else null
 
             if (preferredHandle != null) {
-                makeCall(context, number, preferredHandle, contactId = contactId)
+                makeCall(context, number, preferredHandle, contactId = contactId, isIncomingCallback = isIncomingCallback)
             } else if (accounts.size > 1 && prefs.getInt("default_sim", 0) == 0) {
                 pendingNumber = number
+                pendingIsIncomingCallback = isIncomingCallback
                 if (pendingContact == null && number.isNotBlank()) {
                     coroutineScope.launch {
                         try {
@@ -72,7 +74,7 @@ fun rememberCallLauncher(): CallLauncher {
                                 val resolvedFavSim = prefs.getDefaultSimForContact(resolved.id)
                                 val resolvedHandle = if (resolvedFavSim != null) accounts.find { it.id == resolvedFavSim } else null
                                 if (resolvedHandle != null) {
-                                    makeCall(context, number, resolvedHandle, contactId = resolved.id)
+                                    makeCall(context, number, resolvedHandle, contactId = resolved.id, isIncomingCallback = isIncomingCallback)
                                     return@launch
                                 }
                             }
@@ -83,10 +85,10 @@ fun rememberCallLauncher(): CallLauncher {
                     showSimPicker = true
                 }
             } else {
-                makeCall(context, number, contactId = contactId)
+                makeCall(context, number, contactId = contactId, isIncomingCallback = isIncomingCallback)
             }
         } else {
-            makeCall(context, number, contactId = contactId)
+            makeCall(context, number, contactId = contactId, isIncomingCallback = isIncomingCallback)
         }
     }
 
@@ -94,23 +96,24 @@ fun rememberCallLauncher(): CallLauncher {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         if (permissions[Manifest.permission.CALL_PHONE] == true) {
-            performFinalCall(pendingNumber, pendingContact?.id)
+            performFinalCall(pendingNumber, pendingContact?.id, pendingIsIncomingCallback)
         }
     }
 
-    val initiateCall = { number: String, contact: Contact? ->
+    val initiateCall = { number: String, contact: Contact?, isIncomingCallback: Boolean ->
         pendingNumber = number
         pendingContact = contact
-        
+        pendingIsIncomingCallback = isIncomingCallback
+
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
-            performFinalCall(number, contact?.id)
+            performFinalCall(number, contact?.id, isIncomingCallback)
         } else {
             callPermissionLauncher.launch(arrayOf(Manifest.permission.CALL_PHONE, Manifest.permission.READ_PHONE_STATE))
         }
     }
 
     val callLauncher = remember {
-        CallLauncher { number, contact ->
+        CallLauncher { number, contact, isIncomingCallback ->
             if (number.isBlank() && contact != null) {
                 val validNumbers = contact.phoneNumbers.filter { it.isNotBlank() }
                 if (validNumbers.size > 1) {
@@ -120,16 +123,17 @@ fun rememberCallLauncher(): CallLauncher {
                     } else null
 
                     if (matchingDefault != null) {
-                        initiateCall(matchingDefault, contact)
+                        initiateCall(matchingDefault, contact, isIncomingCallback)
                     } else {
                         pendingContact = contact
+                        pendingIsIncomingCallback = isIncomingCallback
                         showNumberPicker = true
                     }
                 } else if (validNumbers.isNotEmpty()) {
-                    initiateCall(validNumbers.first(), contact)
+                    initiateCall(validNumbers.first(), contact, isIncomingCallback)
                 }
             } else if (number.isNotBlank()) {
-                initiateCall(number, contact)
+                initiateCall(number, contact, isIncomingCallback)
             }
         }
     }
@@ -155,7 +159,7 @@ fun rememberCallLauncher(): CallLauncher {
                 if (c != null) {
                     prefs.setLastUsedNumber(c.id, selectedNumber)
                 }
-                initiateCall(selectedNumber, c ?: contact)
+                initiateCall(selectedNumber, c ?: contact, pendingIsIncomingCallback)
             },
             itemSupporting = { mobileLabel },
             icon = Icons.Default.Phone,
@@ -169,7 +173,7 @@ fun rememberCallLauncher(): CallLauncher {
         SimPickerDialog(
             onDismissRequest = { showSimPicker = false },
             onSimSelected = { handle ->
-                makeCall(context, pendingNumber, handle, contactId = targetContact?.id)
+                makeCall(context, pendingNumber, handle, contactId = targetContact?.id, isIncomingCallback = pendingIsIncomingCallback)
                 showSimPicker = false
             },
             showRememberOption = targetContact != null,
@@ -177,7 +181,7 @@ fun rememberCallLauncher(): CallLauncher {
                 if (rememberForContact && targetContact != null) {
                     prefs.setDefaultSimForContact(targetContact.id, handle.id)
                 }
-                makeCall(context, pendingNumber, handle, contactId = targetContact?.id)
+                makeCall(context, pendingNumber, handle, contactId = targetContact?.id, isIncomingCallback = pendingIsIncomingCallback)
                 showSimPicker = false
             }
         )

@@ -349,19 +349,35 @@ fun isWifiConnected(context: Context): Boolean {
     }
 }
 
-fun makeCall(context: Context, number: String, accountHandle: PhoneAccountHandle? = null, contactId: String? = null) {
+fun makeCall(context: Context, number: String, accountHandle: PhoneAccountHandle? = null, contactId: String? = null, isIncomingCallback: Boolean = false) {
     val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-    
-    val uri = if (number.startsWith("voicemail:")) {
+    val prefs = PreferenceManager(context)
+
+    val cidPrefix = if (
+        !number.startsWith("voicemail:") &&
+        !isEmergencyNumber(number) &&
+        ((contactId != null && prefs.getBoolean(PreferenceManager.KEY_FORCE_CID_CONTACTS, false)) ||
+         (isIncomingCallback && prefs.getBoolean(PreferenceManager.KEY_FORCE_CID_INCOMING_CALLBACK, false)))
+    ) {
+        "#31#"
+    } else {
+        ""
+    }
+
+    // Build URI from original number, then prepend CID prefix unencoded
+    val baseUri = if (number.startsWith("voicemail:")) {
         Uri.parse(number)
     } else if (number.contains("#")) {
-        Uri.parse("tel:" + Uri.encode(number))
+        Uri.parse("tel:$cidPrefix" + Uri.encode(number))
     } else {
-        Uri.fromParts("tel", number, null)
+        if (cidPrefix.isNotEmpty()) {
+            Uri.parse("tel:$cidPrefix$number")
+        } else {
+            Uri.fromParts("tel", number, null)
+        }
     }
     val extras = Bundle()
-    
-    val prefs = PreferenceManager(context)
+
     if (contactId != null) {
         prefs.setLastUsedNumber(contactId, number)
     }
@@ -373,7 +389,7 @@ fun makeCall(context: Context, number: String, accountHandle: PhoneAccountHandle
         } else emptyList()
 
         val favSim = contactId?.let { prefs.getFavoriteSim(it) }
-        
+
         preferredHandle = if (favSim != null) {
             accounts.find { it.id == favSim }
         } else null
@@ -397,7 +413,7 @@ fun makeCall(context: Context, number: String, accountHandle: PhoneAccountHandle
         if (isAirplane && isWifi) {
             // In airplane mode with Wi-Fi connected, route through system ACTION_CALL so privileged IMS/VoWiFi handles it
             try {
-                val callIntent = Intent(Intent.ACTION_CALL, uri).apply {
+                val callIntent = Intent(Intent.ACTION_CALL, baseUri).apply {
                     putExtras(extras)
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
@@ -409,27 +425,32 @@ fun makeCall(context: Context, number: String, accountHandle: PhoneAccountHandle
         }
 
         try {
-            telecomManager.placeCall(uri, extras)
+            telecomManager.placeCall(baseUri, extras)
         } catch (e: Exception) {
             try {
-                val callIntent = Intent(Intent.ACTION_CALL, uri).apply {
+                val callIntent = Intent(Intent.ACTION_CALL, baseUri).apply {
                     putExtras(extras)
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 context.startActivity(callIntent)
             } catch (e2: Exception) {
-                val dialIntent = Intent(Intent.ACTION_DIAL, uri).apply {
+                val dialIntent = Intent(Intent.ACTION_DIAL, baseUri).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 context.startActivity(dialIntent)
             }
         }
     } else {
-        val intent = Intent(Intent.ACTION_DIAL, uri).apply {
+        val intent = Intent(Intent.ACTION_DIAL, baseUri).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         context.startActivity(intent)
     }
+}
+
+private fun isEmergencyNumber(number: String): Boolean {
+    val stripped = number.replace("\\s+".toRegex(), "").replace("-", "")
+    return stripped in setOf("110", "112", "911", "999", "108", "119", "000", "118")
 }
 
 fun openInContacts(context: Context, contactId: String) {

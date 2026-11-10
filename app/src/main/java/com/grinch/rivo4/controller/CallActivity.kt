@@ -251,9 +251,20 @@ class CallActivity : ComponentActivity() {
                     }
                 }
 
+                var wasIncomingCall by remember { mutableStateOf(false) }
+
                 LaunchedEffect(displayCall, displaySession?.connectTimeMillis) {
                     val ct = displaySession?.connectTimeMillis ?: 0L
                     lastConnectTime = ct
+                    if (displayCall != null) {
+                        try {
+                            wasIncomingCall = displayCall.details.callDirection == Call.Details.DIRECTION_INCOMING
+                        } catch (_: Exception) {
+                            wasIncomingCall = false
+                        }
+                    } else {
+                        wasIncomingCall = false
+                    }
                 }
 
                 val darkTheme = isSystemInDarkTheme()
@@ -338,7 +349,8 @@ class CallActivity : ComponentActivity() {
                                         contactName = currentId.name,
                                         phoneNumber = currentId.number,
                                         photoUri = currentId.photoUri,
-                                        durationSeconds = duration
+                                        durationSeconds = duration,
+                                        wasIncoming = wasIncomingCall
                                     )
                                 }
                             }
@@ -361,7 +373,8 @@ class CallActivity : ComponentActivity() {
                                     contactName = currentId.name,
                                     phoneNumber = currentId.number,
                                     photoUri = currentId.photoUri,
-                                    durationSeconds = duration
+                                    durationSeconds = duration,
+                                    wasIncoming = wasIncomingCall
                                 )
                             }
                         }
