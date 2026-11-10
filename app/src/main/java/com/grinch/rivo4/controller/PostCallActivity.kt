@@ -42,6 +42,7 @@ class PostCallActivity : ComponentActivity() {
             ?: com.grinch.rivo4.controller.CallRecorder.lastRecordedFile?.takeIf {
                 it.exists() && System.currentTimeMillis() - com.grinch.rivo4.controller.CallRecorder.lastRecordedTimeMillis < 20000
             }?.absolutePath
+        val wasIncoming = intent.getBooleanExtra(EXTRA_WAS_INCOMING, false)
 
         if (durationSeconds <= 0L) {
             finish()
@@ -56,6 +57,7 @@ class PostCallActivity : ComponentActivity() {
                     photoUri = photoUri,
                     durationSeconds = durationSeconds,
                     recordingPath = recordingPath,
+                    wasIncoming = wasIncoming,
                     onDismiss = {
                         finish()
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -86,6 +88,7 @@ class PostCallActivity : ComponentActivity() {
         const val EXTRA_PHOTO_URI = "extra_photo_uri"
         const val EXTRA_DURATION_SECONDS = "extra_duration_seconds"
         const val EXTRA_RECORDING_PATH = "extra_recording_path"
+        const val EXTRA_WAS_INCOMING = "extra_was_incoming"
 
         fun start(
             context: Context,
@@ -93,7 +96,8 @@ class PostCallActivity : ComponentActivity() {
             phoneNumber: String,
             photoUri: String?,
             durationSeconds: Long,
-            recordingPath: String? = null
+            recordingPath: String? = null,
+            wasIncoming: Boolean = false
         ) {
             if (durationSeconds <= 0L) {
                 return
@@ -109,6 +113,7 @@ class PostCallActivity : ComponentActivity() {
                 if (path != null) {
                     putExtra(EXTRA_RECORDING_PATH, path)
                 }
+                putExtra(EXTRA_WAS_INCOMING, wasIncoming)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NO_ANIMATION)
             }
             context.startActivity(intent)

@@ -74,6 +74,7 @@ fun PostCallScreen(
     photoUri: String?,
     durationSeconds: Long,
     recordingPath: String? = null,
+    wasIncoming: Boolean = false,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -391,7 +392,7 @@ fun PostCallScreen(
                                 // Call
                                 FilledTonalButton(
                                     onClick = {
-                                        initiateCall(context, phoneNumber)
+                                        initiateCall(context, phoneNumber, wasIncoming)
                                         onDismiss()
                                     },
                                     modifier = Modifier.weight(1f),
@@ -588,9 +589,9 @@ fun PostCallScreen(
     }
 }
 
-private fun initiateCall(context: Context, number: String) {
+private fun initiateCall(context: Context, number: String, wasIncoming: Boolean = false) {
     if (number.isEmpty()) return
-    com.grinch.rivo4.controller.util.makeCall(context, number)
+    com.grinch.rivo4.controller.util.makeCall(context, number, isIncomingCallback = wasIncoming)
 }
 
 private fun sendSms(context: Context, number: String, body: String = "") {

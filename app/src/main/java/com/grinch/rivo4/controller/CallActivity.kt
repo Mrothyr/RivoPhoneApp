@@ -251,9 +251,23 @@ class CallActivity : ComponentActivity() {
                     }
                 }
 
-                LaunchedEffect(displayCall, displaySession?.connectTimeMillis) {
-                    val ct = displaySession?.connectTimeMillis ?: 0L
-                    lastConnectTime = ct
+                var wasIncomingCall by remember { mutableStateOf(false) }
+
+                // Capture call direction once when a call appears.
+                // Intentionally NO reset when displayCall becomes null — the value must
+                // survive through the disconnect→PostCallActivity gap.
+                LaunchedEffect(displayCall) {
+                    if (displayCall != null) {
+                        try {
+                            wasIncomingCall = displayCall.details.callDirection == Call.Details.DIRECTION_INCOMING
+                        } catch (_: Exception) {
+                            // keep existing value
+                        }
+                    }
+                }
+
+                LaunchedEffect(displaySession?.connectTimeMillis) {
+                    lastConnectTime = displaySession?.connectTimeMillis ?: 0L
                 }
 
                 val darkTheme = isSystemInDarkTheme()
@@ -338,7 +352,8 @@ class CallActivity : ComponentActivity() {
                                         contactName = currentId.name,
                                         phoneNumber = currentId.number,
                                         photoUri = currentId.photoUri,
-                                        durationSeconds = duration
+                                        durationSeconds = duration,
+                                        wasIncoming = wasIncomingCall
                                     )
                                 }
                             }
@@ -361,7 +376,8 @@ class CallActivity : ComponentActivity() {
                                     contactName = currentId.name,
                                     phoneNumber = currentId.number,
                                     photoUri = currentId.photoUri,
-                                    durationSeconds = duration
+                                    durationSeconds = duration,
+                                    wasIncoming = wasIncomingCall
                                 )
                             }
                         }

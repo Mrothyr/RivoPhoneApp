@@ -327,7 +327,7 @@ fun MissedCallScreen(
                                 // Call
                                 FilledTonalButton(
                                     onClick = {
-                                        makeCall(context, phoneNumber)
+                                        makeCall(context, phoneNumber, isIncomingCallback = true)
                                         onDismiss()
                                     },
                                     modifier = Modifier.weight(1f),

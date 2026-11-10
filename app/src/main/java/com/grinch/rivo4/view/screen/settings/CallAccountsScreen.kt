@@ -100,6 +100,8 @@ fun CallAccountsScreen(
     var groupCallLogs by remember(settingsState) {
         mutableStateOf(prefs.getBoolean(PreferenceManager.KEY_GROUP_CALL_LOGS, true))
     }
+    var forceCidContacts by remember(settingsState) { mutableStateOf(prefs.getBoolean(PreferenceManager.KEY_FORCE_CID_CONTACTS, false)) }
+    var forceCidIncomingCallback by remember(settingsState) { mutableStateOf(prefs.getBoolean(PreferenceManager.KEY_FORCE_CID_INCOMING_CALLBACK, false)) }
 
     var defaultCallBg by remember(settingsState) { mutableStateOf(CallBackgroundStore.defaultModel(context)) }
     var unknownCallBg by remember(settingsState) { mutableStateOf(CallBackgroundStore.unknownModel(context)) }
@@ -421,6 +423,35 @@ fun CallAccountsScreen(
                 }
 
 
+
+                item {
+                    RivoExpressiveGroup(title = stringResource(R.string.settings_force_cid_contacts), icon = Icons.Outlined.PermPhoneMsg) {
+                        item {
+                            RivoSwitchListItem(
+                                headline = stringResource(R.string.settings_force_cid_contacts),
+                                supporting = stringResource(R.string.settings_force_cid_contacts_supporting),
+                                leadingIcon = Icons.Outlined.ContactPhone,
+                                checked = forceCidContacts,
+                                onCheckedChange = {
+                                    forceCidContacts = it
+                                    prefs.setBoolean(PreferenceManager.KEY_FORCE_CID_CONTACTS, it)
+                                }
+                            )
+                        }
+                        item {
+                            RivoSwitchListItem(
+                                headline = stringResource(R.string.settings_force_cid_incoming_callback),
+                                supporting = stringResource(R.string.settings_force_cid_incoming_callback_supporting),
+                                leadingIcon = Icons.Outlined.PhoneCallback,
+                                checked = forceCidIncomingCallback,
+                                onCheckedChange = {
+                                    forceCidIncomingCallback = it
+                                    prefs.setBoolean(PreferenceManager.KEY_FORCE_CID_INCOMING_CALLBACK, it)
+                                }
+                            )
+                        }
+                    }
+                }
 
                 item {
                     RivoExpressiveGroup(title = stringResource(R.string.loc_call_protection_security), icon = Icons.Outlined.Security) {

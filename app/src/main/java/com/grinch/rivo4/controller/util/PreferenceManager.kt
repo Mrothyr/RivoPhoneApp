@@ -555,6 +555,9 @@ class PreferenceManager(context: Context) {
         const val RECORD_FILTER_UNKNOWN_ONLY = 3
         const val RECORD_FILTER_CONTACTS_ONLY = 4
 
+        const val KEY_FORCE_CID_CONTACTS = "force_cid_contacts"
+        const val KEY_FORCE_CID_INCOMING_CALLBACK = "force_cid_incoming_callback"
+
         const val KEY_POCKET_MODE = "pocket_mode"
         const val KEY_VOLUME_SQUEEZE_DND = "volume_squeeze_dnd"
         const val KEY_DND_DURING_CALLS = "dnd_during_calls"
