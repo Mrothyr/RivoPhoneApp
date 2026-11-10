@@ -253,18 +253,21 @@ class CallActivity : ComponentActivity() {
 
                 var wasIncomingCall by remember { mutableStateOf(false) }
 
-                LaunchedEffect(displayCall, displaySession?.connectTimeMillis) {
-                    val ct = displaySession?.connectTimeMillis ?: 0L
-                    lastConnectTime = ct
+                // Capture call direction once when a call appears.
+                // Intentionally NO reset when displayCall becomes null — the value must
+                // survive through the disconnect→PostCallActivity gap.
+                LaunchedEffect(displayCall) {
                     if (displayCall != null) {
                         try {
                             wasIncomingCall = displayCall.details.callDirection == Call.Details.DIRECTION_INCOMING
                         } catch (_: Exception) {
-                            wasIncomingCall = false
+                            // keep existing value
                         }
-                    } else {
-                        wasIncomingCall = false
                     }
+                }
+
+                LaunchedEffect(displaySession?.connectTimeMillis) {
+                    lastConnectTime = displaySession?.connectTimeMillis ?: 0L
                 }
 
                 val darkTheme = isSystemInDarkTheme()

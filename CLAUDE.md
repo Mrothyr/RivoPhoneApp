@@ -85,6 +85,26 @@ app/src/main/java/com/grinch/rivo4/
 - **ProGuard** enabled for release builds; rules in `app/proguard-rules.pro`
 - **Gradle build dir** defaults to `~/.gradle-builds/Rivo4/` (external to project); CI uses `app/build`
 
+## Feature: Caller ID Override (#31# CID)
+
+Two independent settings in **Call Accounts** screen allow per-call CLIR override via `#31#` prefix:
+
+- **Show Caller ID for Contacts** (`KEY_FORCE_CID_CONTACTS`) — prepends `#31#` when calling a saved phonebook contact (`contactId != null`)
+- **Show Caller ID for Callbacks** (`KEY_FORCE_CID_INCOMING_CALLBACK`) — prepends `#31#` when returning an incoming/missed call from call history, MissedCallScreen, or PostCallScreen
+
+Guards: emergency numbers and voicemail are always excluded.
+
+### Call flow integration
+
+- Core logic lives in `makeCall()` (`controller/util/utils.kt`) — evaluates `contactId` and `isIncomingCallback` parameters against preference state
+- `isIncomingCallback` is determined at the call site: `CallLog.Calls.INCOMING_TYPE` / `MISSED_TYPE` in Recents/CallLogs, always `true` in MissedCallScreen, threaded via `wasIncoming` Intent extra through PostCallActivity
+- `CallLauncher` threads `isIncomingCallback` through async flows (permission requests, SIM picker, number picker) via `pendingIsIncomingCallback` state
+- URI construction uses `Uri.fromParts("tel", dialString, null)` to safely encode `#` as `%23` — `TelecomManager.placeCall()` reads `getSchemeSpecificPart()` which decodes correctly
+
+### Carrier dependency
+
+`#31#` is a GSM supplementary service code (3GPP TS 24.082). Behavior is carrier-dependent and best-effort. CDMA networks use `*82` instead (not implemented). Settings wording uses "Try to send" to reflect this.
+
 ## Testing
 
 JUnit 4 tests in `app/src/test/`. `unitTests.returnDefaultValues = true` in Gradle config so Android framework classes return defaults in unit tests.

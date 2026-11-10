@@ -1482,9 +1482,9 @@ White text</string>
     <string name="settings_floating_call_bubble">Floating Call Bubble</string>
     <string name="settings_floating_call_bubble_supporting">Show a draggable bubble with call controls when leaving the call screen</string>
     <string name="settings_force_cid_contacts">Show Caller ID for Contacts</string>
-    <string name="settings_force_cid_contacts_supporting">Always send your phone number when calling saved contacts</string>
+    <string name="settings_force_cid_contacts_supporting">Try to send your phone number when calling saved contacts</string>
     <string name="settings_force_cid_incoming_callback">Show Caller ID for Callbacks</string>
-    <string name="settings_force_cid_incoming_callback_supporting">Always send your phone number when returning incoming calls</string>
+    <string name="settings_force_cid_incoming_callback_supporting">Try to send your phone number when returning incoming calls</string>
     <string name="floating_bubble_overlay_permission_desc">Display over other apps permission is required to show the floating call bubble</string>
     <string name="floating_bubble_permission_required_toast">Please grant \"Display over other apps\" to use the floating call bubble</string>
 

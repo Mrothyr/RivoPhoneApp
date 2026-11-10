@@ -364,17 +364,13 @@ fun makeCall(context: Context, number: String, accountHandle: PhoneAccountHandle
         ""
     }
 
-    // Build URI from original number, then prepend CID prefix unencoded
+    // Uri.fromParts encodes # safely (%23) so #31# is not misread as a fragment separator.
+    // TelecomManager.placeCall reads getSchemeSpecificPart() which decodes it back correctly.
+    val dialString = cidPrefix + number
     val baseUri = if (number.startsWith("voicemail:")) {
         Uri.parse(number)
-    } else if (number.contains("#")) {
-        Uri.parse("tel:$cidPrefix" + Uri.encode(number))
     } else {
-        if (cidPrefix.isNotEmpty()) {
-            Uri.parse("tel:$cidPrefix$number")
-        } else {
-            Uri.fromParts("tel", number, null)
-        }
+        Uri.fromParts("tel", dialString, null)
     }
     val extras = Bundle()
 
